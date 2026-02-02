@@ -9,10 +9,10 @@ CORS(app)
 
 # --- CONFIGURATION ---
 # Default to empty strings to force user to set them in Render
-ARK_IP = os.environ.get('ARK_IP', '127.0.0.1')
-ARK_PORT = int(os.environ.get('ARK_PORT', 27020))
-ARK_PASS = os.environ.get('ARK_PASS', 'password')
-WEB_ACCESS_CODE = os.environ.get('WEB_ACCESS_CODE', '1234')
+ARK_IP = os.environ.get('ARK_IP', '31.214.239.14')
+ARK_PORT = int(os.environ.get('ARK_PORT', 11690))
+ARK_PASS = os.environ.get('ARK_PASS', '3uKmTEuM')
+WEB_ACCESS_CODE = os.environ.get('WEB_ACCESS_CODE', 'Taker420')
 
 def run_rcon(command):
     try:
