@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: ark-mobile-panel
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: ARK_IP
+        sync: false
+      - key: ARK_PORT
+        value: 11690
+      - key: ARK_PASS
+        sync: false
+      - key: WEB_ACCESS_CODE
+        sync: false
