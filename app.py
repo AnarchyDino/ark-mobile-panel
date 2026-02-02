@@ -7,25 +7,25 @@ from rcon.source import Client
 app = Flask(__name__)
 CORS(app)
 
-# --- HARDCODED CREDENTIALS (FROM NITRADO DASHBOARD) ---
-# We use the Dashboard Port (11690), NOT the internal file port (25000).
+# --- DIRECT CONNECTION ATTEMPT ---
+# Trying the internal port found in GameUserSettings.ini
 ARK_IP = '31.214.239.14'
-ARK_PORT = 11690
+ARK_PORT = 25000 
 ARK_PASS = '3uKmTEuM'
 
 print("-------------------------------------------------")
-print(f"✅ SYSTEM BOOT. TARGETING: {ARK_IP}:{ARK_PORT}")
+print(f"✅ SYSTEM BOOT. TARGETING INTERNAL: {ARK_IP}:{ARK_PORT}")
 print("-------------------------------------------------")
 
 def run_rcon(command):
     try:
-        # Timeout 15s
+        # 15s timeout
         with Client(ARK_IP, ARK_PORT, passwd=ARK_PASS, timeout=15) as client:
             print(f"🚀 SENDING: {command}")
             response = client.run(command)
             
             if not response:
-                return "✅ Executed"
+                return "✅ Executed (No Return)"
             if "Server received, But no response" in response:
                 return "✅ Success"
             
@@ -35,10 +35,11 @@ def run_rcon(command):
         error_msg = str(e)
         print(f"❌ RCON ERROR: {error_msg}")
         
+        # If 25000 is blocked, this error will trigger instantly
         if "Connection refused" in error_msg:
-            return f"❌ CONNECTION REFUSED. Port {ARK_PORT} might be blocked or Server is restarting."
+            return f"❌ CONNECTION REFUSED. Port {ARK_PORT} is blocked by firewall."
         if "timed out" in error_msg:
-            return "❌ TIMED OUT. Server offline or IP wrong."
+            return "❌ TIMED OUT. IP is wrong or Server is offline."
         if "Authentication failed" in error_msg:
             return "❌ WRONG PASSWORD."
             
