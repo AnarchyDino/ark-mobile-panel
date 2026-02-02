@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARK: PORT 25000 TEST</title>
+    <title>ARK: PORT SCANNER</title>
     <style>
         body { background:#111; color:#fff; font-family:sans-serif; padding:20px; text-align:center; }
         .btn { display:block; width:100%; padding:20px; margin:10px 0; font-size:1.2rem; font-weight:bold; cursor:pointer; background:#333; color:#fff; border:none; border-radius:5px; }
@@ -13,18 +13,16 @@
 </head>
 <body>
 
-    <h2>TARGETING PORT: 25000</h2>
+    <h2>AUTO-SCANNING PORTS...</h2>
     
-    <div id="console">Ready to test...</div>
+    <div id="console">Ready.</div>
 
-    <button class="btn btn-main" onclick="send('ListPlayers')">1. CHECK PLAYERS (ListPlayers)</button>
-    <button class="btn" onclick="send('Broadcast HELLO_WORLD')">2. BROADCAST (No Cheat)</button>
-    <button class="btn" onclick="send('cheat Broadcast HELLO_WORLD')">3. BROADCAST (With Cheat)</button>
-    <button class="btn" onclick="send('ServerChat HELLO')">4. SERVER CHAT</button>
+    <button class="btn btn-main" onclick="send('ListPlayers')">1. SCAN FOR REAL PORT</button>
+    <button class="btn" onclick="send('Broadcast TEST_MESSAGE')">2. TEST BROADCAST</button>
 
     <script>
         async function send(cmd) {
-            log(`> ${cmd}`);
+            log(`> Scanning with: ${cmd}...`);
             try {
                 const res = await fetch('/api/command', {
                     method:'POST', headers:{'Content-Type':'application/json'},
