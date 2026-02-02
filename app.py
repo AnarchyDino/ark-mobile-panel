@@ -8,10 +8,8 @@ app = Flask(__name__)
 CORS(app)
 
 # --- CONFIGURATION ---
-# ⚠️ IF YOU ARE STUCK, REPLACE THESE 'os.environ' LINES WITH YOUR ACTUAL NUMBERS ⚠️
-# Example: ARK_IP = '85.190.123.45'
 ARK_IP = os.environ.get('ARK_IP', '31.214.239.14')
-ARK_PORT = int(os.environ.get('ARK_PORT', '11690'))
+ARK_PORT = int(os.environ.get('ARK_PORT', 11690))
 ARK_PASS = os.environ.get('ARK_PASS', '3uKmTEuM')
 
 print("-------------------------------------------------")
@@ -56,17 +54,11 @@ def home():
 def send_command():
     data = request.json
     cmd = data.get('command')
-    response = run_rcon(cmd)
-    return jsonify({"response": response})
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
     
-    # Debug print to Render Logs
-    print(f"Command received: {cmd}")
-    
+    # Run the command
     response = run_rcon(cmd)
+    
+    # THIS LINE MUST BE INDENTED (4 SPACES)
     return jsonify({"response": response})
 
 if __name__ == '__main__':
