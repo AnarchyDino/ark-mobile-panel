@@ -1,113 +1,65 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ARK OPS: FIXED</title>
-    <style>
-        body { background:#111; color:#fff; font-family:sans-serif; padding:15px; }
-        .btn { width:100%; padding:20px; margin-bottom:10px; font-weight:bold; font-size:1.2rem; cursor:pointer; }
-        .btn-green { background:#0f0; color:#000; }
-        .btn-red { background:#f00; color:#fff; }
-        .btn-blue { background:#00f; color:#fff; }
-        select, input { width:100%; padding:15px; margin-bottom:10px; font-size:1rem; }
-        #console { background:#000; padding:10px; border:1px solid #555; height:150px; overflow-y:auto; font-family:monospace; color:#0f0; }
-    </style>
-</head>
-<body>
+import os
+import sys
+from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
+from rcon.source import Client
 
-    <h1>1. DIAGNOSTIC TEST</h1>
-    <div id="console">Waiting...</div>
-    <button class="btn btn-blue" onclick="send('Broadcast CONNECTION_TEST_SUCCESSFUL')">📢 TEST BROADCAST</button>
-    <p style="font-size:0.8rem; color:#aaa">Click above. If you do not see red text at the top of your screen in-game, your RCON PORT in Render is wrong.</p>
+app = Flask(__name__)
+CORS(app)
 
-    <h1>2. WORLD CONTROL</h1>
-    <button class="btn" onclick="send('SetTimeOfDay 08:00')">☀️ SET MORNING</button>
-    <button class="btn" onclick="send('SetTimeOfDay 20:00')">🌙 SET NIGHT</button>
-    <button class="btn" onclick="send('SaveWorld')">💾 FORCE SAVE</button>
+# --- DIRECT CONNECTION ATTEMPT ---
+# Trying the internal port found in GameUserSettings.ini
+ARK_IP = '31.214.239.14'
+ARK_PORT = 25000 
+ARK_PASS = '3uKmTEuM'
 
-    <h1>3. PLAYER KITS</h1>
-    <button class="btn btn-blue" onclick="scan()">🔄 SCAN PLAYERS</button>
-    <select id="playerSelect"><option value="">Scan First...</option></select>
-    
-    <button class="btn btn-green" onclick="giveKit('pvp')">⚔️ GIVE PVP KIT</button>
-    <button class="btn btn-green" onclick="giveKit('tek')">🤖 GIVE TEK KIT</button>
+print("-------------------------------------------------")
+print(f"✅ SYSTEM BOOT. TARGETING INTERNAL: {ARK_IP}:{ARK_PORT}")
+print("-------------------------------------------------")
 
-    <script>
-        let targetID = null;
-
-        async function send(cmd) {
-            // FORCE "cheat" PREFIX ON EVERYTHING
-            const finalCmd = `cheat ${cmd}`;
+def run_rcon(command):
+    try:
+        # 15s timeout
+        with Client(ARK_IP, ARK_PORT, passwd=ARK_PASS, timeout=15) as client:
+            print(f"🚀 SENDING: {command}")
+            response = client.run(command)
             
-            log(`> ${finalCmd}`);
-            try {
-                const res = await fetch('/api/command', {
-                    method:'POST', headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({command:finalCmd})
-                });
-                const data = await res.json();
-                
-                if(data.response.includes("❌")) {
-                    log(data.response);
-                    alert("ERROR: " + data.response);
-                } else {
-                    log(`< ${data.response}`);
-                }
-            } catch(e) {
-                log("❌ NETWORK ERROR");
-            }
-        }
-
-        function log(m) { 
-            const c=document.getElementById('console'); 
-            c.innerHTML = `<div>${m}</div>` + c.innerHTML; 
-        }
-
-        async function scan() {
-            // ListPlayers does NOT use 'cheat'
-            const res = await fetch('/api/command', {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({command:"ListPlayers"})
-            });
-            const data = await res.json();
-            const list = document.getElementById('playerSelect');
-            list.innerHTML = "";
+            if not response:
+                return "✅ Executed (No Return)"
+            if "Server received, But no response" in response:
+                return "✅ Success"
             
-            const matches = data.response.matchAll(/(\d+)\.\s(.*?),\s([0-9a-fA-F]+)/g);
-            for(const m of matches) {
-                const opt = document.createElement('option');
-                opt.text = m[2]; 
-                opt.value = m[3];
-                list.add(opt);
-            }
-            log("✅ Players Scanned");
-            list.onchange = function(){ targetID = this.value; };
-        }
-
-        async function giveKit(type) {
-            if(!targetID) return alert("Select a player!");
+            return response
             
-            const items = [];
-            if(type === 'pvp') {
-                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItem_WeaponMachinedSniper.PrimalItem_WeaponMachinedSniper'");
-                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItemAmmo_AdvancedSniperBullet.PrimalItemAmmo_AdvancedSniperBullet'");
-                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Metal/PrimalItemArmor_MetalHelmet.PrimalItemArmor_MetalHelmet'");
-                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Metal/PrimalItemArmor_MetalShirt.PrimalItemArmor_MetalShirt'");
-            }
-            if(type === 'tek') {
-                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItem_TekRifle.PrimalItem_TekRifle'");
-                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Tek/PrimalItemArmor_TekHelmet.PrimalItemArmor_TekHelmet'");
-                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Tek/PrimalItemArmor_TekShirt.PrimalItemArmor_TekShirt'");
-                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Resources/PrimalItemResource_Element.PrimalItemResource_Element'");
-            }
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ RCON ERROR: {error_msg}")
+        
+        # If 25000 is blocked, this error will trigger instantly
+        if "Connection refused" in error_msg:
+            return f"❌ CONNECTION REFUSED. Port {ARK_PORT} is blocked by firewall."
+        if "timed out" in error_msg:
+            return "❌ TIMED OUT. IP is wrong or Server is offline."
+        if "Authentication failed" in error_msg:
+            return "❌ WRONG PASSWORD."
+            
+        return f"❌ Error: {error_msg}"
 
-            for(const bp of items) {
-                // FORCE ITEM MODE: 1 quantity, 50 quality, 0 (Item, not BP)
-                await send(`GiveItemToPlayer ${targetID} "${bp}" 1 50 0`);
-            }
-            alert("Kit Sent!");
-        }
-    </script>
-</body>
-</html>
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/health')
+def health():
+    return "OK", 200
+
+@app.route('/api/command', methods=['POST'])
+def send_command():
+    data = request.json
+    cmd = data.get('command')
+    response = run_rcon(cmd)
+    return jsonify({"response": response})
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
