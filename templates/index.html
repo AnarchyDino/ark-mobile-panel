@@ -3,306 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ARK ASCENDED OPS</title>
+    <title>ARK OPS: FIXED</title>
     <style>
-        :root { --bg:#050505; --panel:#111; --accent:#00ff9d; --danger:#ff0055; --warn:#ffcc00; --text:#eee; }
-        body { background:var(--bg); color:var(--text); font-family:sans-serif; margin:0; padding-bottom:90px; }
-        * { box-sizing:border-box; }
-        
-        .header { background:var(--panel); border-bottom:2px solid var(--accent); padding:15px; position:sticky; top:0; z-index:100; display:flex; justify-content:space-between; align-items:center; }
-        h1 { margin:0; color:var(--accent); font-size:1.2rem; text-transform:uppercase; letter-spacing:2px; }
-        .status { font-size:0.7rem; font-weight:bold; color:#666; }
-        .status.on { color:var(--accent); text-shadow:0 0 5px var(--accent); }
-
-        .view { display:none; padding:15px; }
-        .view.active { display:block; }
-        .card { background:var(--panel); border:1px solid #333; border-radius:6px; padding:15px; margin-bottom:15px; }
-        h2 { color:#888; font-size:0.9rem; margin-top:0; border-bottom:1px solid #333; padding-bottom:5px; margin-bottom:10px; text-transform:uppercase; }
-
-        .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-        .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; }
-
-        .btn { width:100%; padding:14px; border:none; background:#222; color:#ccc; font-weight:bold; border-radius:4px; text-transform:uppercase; font-size:0.75rem; cursor:pointer; margin-bottom:5px; }
-        .btn:active { transform:scale(0.98); background:#444; }
-        .btn-main { background:var(--accent); color:black; }
-        .btn-danger { background:var(--danger); color:white; }
-        .btn-warn { background:var(--warn); color:black; }
-        
-        input, select { width:100%; padding:12px; background:#000; border:1px solid #444; color:white; margin-bottom:10px; border-radius:4px; font-size:1rem; }
-        
-        #console { background:#000; height:120px; overflow-y:auto; padding:10px; font-family:monospace; font-size:0.75rem; border:1px solid #333; margin-bottom:10px; color:#0f0; }
-
-        .nav { position:fixed; bottom:0; width:100%; background:#080808; border-top:1px solid #333; display:flex; height:70px; z-index:90; }
-        .nav-btn { flex:1; background:none; border:none; color:#444; font-size:1.5rem; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-        .nav-btn.active { color:var(--accent); }
-        .nav-txt { font-size:0.6rem; font-weight:bold; margin-top:3px; }
+        body { background:#111; color:#fff; font-family:sans-serif; padding:15px; }
+        .btn { width:100%; padding:20px; margin-bottom:10px; font-weight:bold; font-size:1.2rem; cursor:pointer; }
+        .btn-green { background:#0f0; color:#000; }
+        .btn-red { background:#f00; color:#fff; }
+        .btn-blue { background:#00f; color:#fff; }
+        select, input { width:100%; padding:15px; margin-bottom:10px; font-size:1rem; }
+        #console { background:#000; padding:10px; border:1px solid #555; height:150px; overflow-y:auto; font-family:monospace; color:#0f0; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>ARK OPS</h1>
-        <div id="status" class="status">DISCONNECTED</div>
-    </div>
+    <h1>1. DIAGNOSTIC TEST</h1>
+    <div id="console">Waiting...</div>
+    <button class="btn btn-blue" onclick="send('Broadcast CONNECTION_TEST_SUCCESSFUL')">📢 TEST BROADCAST</button>
+    <p style="font-size:0.8rem; color:#aaa">Click above. If you do not see red text at the top of your screen in-game, your RCON PORT in Render is wrong.</p>
 
-    <div id="view-world" class="view active">
-        <div class="card">
-            <h2>Server State</h2>
-            <div class="grid-2">
-                <button class="btn" onclick="send('SaveWorld')">💾 Save</button>
-                <button class="btn btn-danger" onclick="confirmSend('DoExit','STOP SERVER?')">🛑 Shutdown</button>
-            </div>
-            <button class="btn btn-warn" style="margin-top:5px" onclick="confirmSend('DestroyWildDinos','Wipe all wild dinos?')">🦖 Wipe Wild Dinos</button>
+    <h1>2. WORLD CONTROL</h1>
+    <button class="btn" onclick="send('SetTimeOfDay 08:00')">☀️ SET MORNING</button>
+    <button class="btn" onclick="send('SetTimeOfDay 20:00')">🌙 SET NIGHT</button>
+    <button class="btn" onclick="send('SaveWorld')">💾 FORCE SAVE</button>
+
+    <h1>3. PLAYER KITS</h1>
+    <button class="btn btn-blue" onclick="scan()">🔄 SCAN PLAYERS</button>
+    <select id="playerSelect"><option value="">Scan First...</option></select>
+    
+    <button class="btn btn-green" onclick="giveKit('pvp')">⚔️ GIVE PVP KIT</button>
+    <button class="btn btn-green" onclick="giveKit('tek')">🤖 GIVE TEK KIT</button>
+
+    <script>
+        let targetID = null;
+
+        async function send(cmd) {
+            // FORCE "cheat" PREFIX ON EVERYTHING
+            const finalCmd = `cheat ${cmd}`;
             
-            <h2 style="margin-top:15px">ASA Weather & Time</h2>
-            <div class="grid-3">
-                <button class="btn" onclick="send('cheat SetTimeOfDay 06:00')">🌅 Dawn</button>
-                <button class="btn" onclick="send('cheat SetTimeOfDay 12:00')">☀️ Noon</button>
-                <button class="btn" onclick="send('cheat SetTimeOfDay 22:00')">🌙 Night</button>
-            </div>
-            <div class="grid-2" style="margin-top:5px">
-                <button class="btn btn-main" onclick="forceClear()">☀️ FORCE CLEAR</button>
-                <button class="btn" onclick="send('cheat CE start_rain')">🌧️ Rain</button>
-                <button class="btn" onclick="send('cheat CE start_fog')">🌫️ Fog</button>
-                <button class="btn" onclick="send('cheat CE start_superheat')">🔥 Heatwave</button>
-            </div>
-        </div>
+            log(`> ${finalCmd}`);
+            try {
+                const res = await fetch('/api/command', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({command:finalCmd})
+                });
+                const data = await res.json();
+                
+                if(data.response.includes("❌")) {
+                    log(data.response);
+                    alert("ERROR: " + data.response);
+                } else {
+                    log(`< ${data.response}`);
+                }
+            } catch(e) {
+                log("❌ NETWORK ERROR");
+            }
+        }
 
-        <div class="card">
-            <h2>Live Console</h2>
-            <div id="console">System Ready. Connecting...</div>
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="custom" placeholder="Raw Command..." style="margin:0">
-                <button class="btn btn-main" style="width:80px" onclick="sendCustom()">SEND</button>
-            </div>
-        </div>
-    </div>
+        function log(m) { 
+            const c=document.getElementById('console'); 
+            c.innerHTML = `<div>${m}</div>` + c.innerHTML; 
+        }
 
-    <div id="view-players" class="view">
-        <div class="card">
-            <button class="btn btn-main" onclick="scanPlayers()">🔄 Scan Players</button>
-            <div id="p-list" style="margin-top:10px;"></div>
-        </div>
-
-        <div id="p-actions" class="card" style="display:none; border-color:var(--accent);">
-            <h2 id="target-name" style="color:var(--accent)">Target: None</h2>
-            
-            <div class="grid-2">
-                <button class="btn btn-main" onclick="pCmd('heal')">❤️ Heal</button>
-                <button class="btn btn-main" onclick="pCmd('xp')">✨ +XP</button>
-                <button class="btn btn-danger" onclick="pCmd('kick')">🥾 Kick</button>
-                <button class="btn btn-danger" onclick="pCmd('kill')">💀 Kill</button>
-            </div>
-
-            <h2 style="margin-top:15px;">Fun / Troll</h2>
-            <div class="grid-3">
-                <button class="btn" onclick="pCmd('big')">🦍 Big</button>
-                <button class="btn" onclick="pCmd('small')">🐜 Small</button>
-                <button class="btn" onclick="pCmd('normal')">😐 Normal</button>
-            </div>
-
-            <h2 style="margin-top:15px;">Deploy Kits (Items)</h2>
-            <div class="grid-2">
-                <button class="btn btn-warn" onclick="giveKit('starter')">🐣 Starter</button>
-                <button class="btn btn-warn" onclick="giveKit('pvp')">⚔️ PvP</button>
-                <button class="btn btn-warn" onclick="giveKit('tek')">🤖 Tek</button>
-                <button class="btn btn-warn" onclick="giveKit('build')">🏗️ Builder</button>
-                <button class="btn btn-warn" onclick="giveKit('tame')">🥩 Tamer</button>
-                <button class="btn btn-warn" onclick="giveKit('ocean')">🤿 Ocean</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="view-spawn" class="view">
-        <div style="position:sticky; top:70px; background:var(--bg); padding-bottom:5px; z-index:80;">
-            <select id="spawn-target">
-                <option value="">🚫 Select Player First (Players Tab)</option>
-            </select>
-            <input type="text" id="search" placeholder="🔍 Search Items & Dinos..." onkeyup="renderItems()">
-        </div>
-        <div id="item-list"></div>
-    </div>
-
-    <div class="nav">
-        <button class="nav-btn active" onclick="tab('world',this)"><span>🌍</span><span class="nav-txt">WORLD</span></button>
-        <button class="nav-btn" onclick="tab('players',this)"><span>👤</span><span class="nav-txt">PLAYERS</span></button>
-        <button class="nav-btn" onclick="tab('spawn',this)"><span>🎒</span><span class="nav-txt">SPAWN</span></button>
-    </div>
-
-<script>
-    // --- DATABASE ---
-    const ITEMS = [
-        {n:"Tek Rifle", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItem_TekRifle.PrimalItem_TekRifle'"},
-        {n:"Tek Helmet", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Tek/PrimalItemArmor_TekHelmet.PrimalItemArmor_TekHelmet'"},
-        {n:"Tek Chest", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Tek/PrimalItemArmor_TekShirt.PrimalItemArmor_TekShirt'"},
-        {n:"Tek Legs", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Tek/PrimalItemArmor_TekPants.PrimalItemArmor_TekPants'"},
-        {n:"Tek Boots", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Tek/PrimalItemArmor_TekBoots.PrimalItemArmor_TekBoots'"},
-        {n:"Element (100)", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Resources/PrimalItemResource_Element.PrimalItemResource_Element'", q:100},
-        {n:"Heavy Turret", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Structures/Misc/PrimalItemStructure_TurretTek.PrimalItemStructure_TurretTek'"},
-        {n:"Fab Sniper", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItem_WeaponMachinedSniper.PrimalItem_WeaponMachinedSniper'"},
-        {n:"Sniper Ammo (100)", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItemAmmo_AdvancedSniperBullet.PrimalItemAmmo_AdvancedSniperBullet'", q:100},
-        {n:"Pump Shotgun", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItem_WeaponGun_PumpShotgun.PrimalItem_WeaponGun_PumpShotgun'"},
-        {n:"Flak Helmet", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Metal/PrimalItemArmor_MetalHelmet.PrimalItemArmor_MetalHelmet'"},
-        {n:"Flak Chest", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Metal/PrimalItemArmor_MetalShirt.PrimalItemArmor_MetalShirt'"},
-        {n:"Rex Saddle", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Saddles/PrimalItemArmor_RexSaddle.PrimalItemArmor_RexSaddle'"},
-        {n:"Carchar Saddle", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Saddles/PrimalItemArmor_Carcha.PrimalItemArmor_Carcha'"},
-        {n:"Medbrew (100)", p:"Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Consumables/PrimalItemConsumable_HealSoup.PrimalItemConsumable_HealSoup'", q:100}
-    ];
-
-    const DINOS = [
-        {n:"Rex (Tamed)", id:"Rex_Character_BP_C"},
-        {n:"Giga (Tamed)", id:"Gigant_Character_BP_C"},
-        {n:"Carchar (Tamed)", id:"Carcha_Character_BP_C"},
-        {n:"Rhynio (Tamed)", id:"Rhynio_Character_BP_C"},
-        {n:"Wyvern (Tamed)", id:"Wyvern_Character_BP_Fire_C"},
-        {n:"Quetz (Tamed)", id:"Quetz_Character_BP_C"}
-    ];
-
-    let targetID = null;
-
-    async function send(cmd) {
-        log(`> ${cmd}`);
-        try {
+        async function scan() {
+            // ListPlayers does NOT use 'cheat'
             const res = await fetch('/api/command', {
                 method:'POST', headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({command:cmd}) 
+                body:JSON.stringify({command:"ListPlayers"})
             });
             const data = await res.json();
+            const list = document.getElementById('playerSelect');
+            list.innerHTML = "";
             
-            if(data.response.includes("❌")) {
-                log(data.response);
-                document.getElementById('status').innerText = "ERROR";
-                document.getElementById('status').style.color = "red";
-            } else {
-                log(`< ${data.response}`);
-                document.getElementById('status').innerText = "ONLINE";
-                document.getElementById('status').classList.add('on');
+            const matches = data.response.matchAll(/(\d+)\.\s(.*?),\s([0-9a-fA-F]+)/g);
+            for(const m of matches) {
+                const opt = document.createElement('option');
+                opt.text = m[2]; 
+                opt.value = m[3];
+                list.add(opt);
             }
-        } catch(e) {
-            log("❌ APP ERROR: Check Render Logs.");
-            document.getElementById('status').innerText = "OFFLINE";
-            document.getElementById('status').classList.remove('on');
+            log("✅ Players Scanned");
+            list.onchange = function(){ targetID = this.value; };
         }
-    }
 
-    function log(m) { const c=document.getElementById('console'); c.innerHTML+=`<div>${m}</div>`; c.scrollTop=c.scrollHeight; }
-
-    async function forceClear() {
-        // Runs all stop commands to ensure weather is cleared
-        await send('cheat CE stop_rain');
-        await send('cheat CE stop_fog');
-        await send('cheat CE stop_superheat');
-        log("✅ Force Clear Sent");
-    }
-
-    async function scanPlayers() {
-        const res = await fetch('/api/command', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({command:"ListPlayers"})
-        });
-        const data = await res.json();
-        const list = document.getElementById('p-list');
-        const drop = document.getElementById('spawn-target');
-        
-        list.innerHTML = ""; drop.innerHTML = '<option value="">Select Player...</option>';
-
-        const matches = data.response.matchAll(/(\d+)\.\s(.*?),\s([0-9a-fA-F]+)/g);
-        let found = false;
-        for(const m of matches) {
-            found = true;
-            const name = m[2]; const id = m[3];
-            const div = document.createElement('div');
-            div.style.background='#222'; div.style.padding='10px'; div.style.marginBottom='5px'; div.style.display='flex'; div.style.justifyContent='space-between';
-            div.innerHTML = `<span><b>${name}</b></span> <button style="background:var(--accent); border:none; padding:5px 10px; cursor:pointer;" onclick="sel('${id}','${name}')">SELECT</button>`;
-            list.appendChild(div);
-            drop.add(new Option(name, id));
-        }
-        
-        if(found) { log("✅ Players Updated"); document.getElementById('status').innerText = "ONLINE"; }
-        else { list.innerHTML = "<div style='text-align:center; color:#555;'>No Players Online</div>"; log("⚠️ Connected, but 0 players."); }
-    }
-
-    function sel(id, name) {
-        targetID = id;
-        document.getElementById('target-name').innerText = `Target: ${name}`;
-        document.getElementById('p-actions').style.display = 'block';
-        document.getElementById('spawn-target').value = id;
-        tab('players', document.querySelectorAll('.nav-btn')[1]);
-    }
-
-    function pCmd(type) {
-        if(!targetID) return alert("Select Player First");
-        if(type==='heal') send(`ScriptCommand RefillStats ${targetID}`);
-        if(type==='xp') send(`GiveExpToPlayer ${targetID} 5000 0 0`);
-        if(type==='kick') send(`KickPlayer ${targetID}`);
-        if(type==='kill') send(`KillPlayer ${targetID}`);
-        if(type==='big') send(`ScriptCommand ChangeSize 3 ${targetID}`);
-        if(type==='small') send(`ScriptCommand ChangeSize 0.25 ${targetID}`);
-        if(type==='normal') send(`ScriptCommand ChangeSize 1 ${targetID}`);
-    }
-
-    async function giveKit(k) {
-        if(!targetID) return alert("Select Player First");
-        const id = targetID;
-        alert(`Sending ${k.toUpperCase()} Kit...`);
-        
-        let items = [];
-        if(k==='starter') items = [ITEMS[11].p, ITEMS[12].p, ITEMS[10].p]; 
-        if(k==='pvp') items = [ITEMS[0].p, ITEMS[1].p, ITEMS[2].p, ITEMS[3].p, ITEMS[4].p, ITEMS[8].p, ITEMS[17].p]; 
-        if(k==='tek') items = [ITEMS[5].p, ITEMS[1].p, ITEMS[2].p, ITEMS[3].p, ITEMS[4].p]; 
-        if(k==='build') items = [ITEMS[7].p]; 
-        if(k==='ocean') items = ["Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Scuba/PrimalItemArmor_ScubaHelmet_Goggles.PrimalItemArmor_ScubaHelmet_Goggles'", "Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Scuba/PrimalItemArmor_ScubaShirt_SuitWithTank.PrimalItemArmor_ScubaShirt_SuitWithTank'", "Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Scuba/PrimalItemArmor_ScubaBoots_Flippers.PrimalItemArmor_ScubaBoots_Flippers'"];
-        if(k==='tame') items = ["Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Consumables/PrimalItemConsumable_Narcotic.PrimalItemConsumable_Narcotic'", "Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Consumables/PrimalItemConsumable_Kibble_Base_XLarge.PrimalItemConsumable_Kibble_Base_XLarge'", "Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItem_WeaponCrossbow.PrimalItem_WeaponCrossbow'"];
-        
-        for(const bp of items) {
-            await send(`GiveItemToPlayer ${id} "${bp}" 1 50 0`);
-        }
-    }
-
-    function renderItems() {
-        const q = document.getElementById('search').value.toLowerCase();
-        const box = document.getElementById('item-list'); box.innerHTML = "";
-        ITEMS.forEach(i => {
-            if(i.n.toLowerCase().includes(q)) {
-                const d = document.createElement('div');
-                d.style.background='#222'; d.style.padding='10px'; d.style.marginBottom='5px'; d.style.display='flex'; d.style.justifyContent='space-between';
-                d.innerHTML = `<span>${i.n}</span> <button style="background:var(--warn); border:none; padding:5px 10px;" onclick="gItem('${i.p}',${i.q||1})">GIVE</button>`;
-                box.appendChild(d);
+        async function giveKit(type) {
+            if(!targetID) return alert("Select a player!");
+            
+            const items = [];
+            if(type === 'pvp') {
+                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItem_WeaponMachinedSniper.PrimalItem_WeaponMachinedSniper'");
+                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItemAmmo_AdvancedSniperBullet.PrimalItemAmmo_AdvancedSniperBullet'");
+                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Metal/PrimalItemArmor_MetalHelmet.PrimalItemArmor_MetalHelmet'");
+                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Metal/PrimalItemArmor_MetalShirt.PrimalItemArmor_MetalShirt'");
             }
-        });
-        DINOS.forEach(d => {
-            if(d.n.toLowerCase().includes(q)) {
-                const div = document.createElement('div');
-                div.style.background='#222'; div.style.padding='10px'; div.style.marginBottom='5px'; div.style.display='flex'; div.style.justifyContent='space-between';
-                div.innerHTML = `<span>${d.n}</span> <button style="background:var(--danger); color:white; border:none; padding:5px 10px;" onclick="spawnDino('${d.id}')">SPAWN</button>`;
-                box.appendChild(div);
+            if(type === 'tek') {
+                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItem_TekRifle.PrimalItem_TekRifle'");
+                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Tek/PrimalItemArmor_TekHelmet.PrimalItemArmor_TekHelmet'");
+                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Tek/PrimalItemArmor_TekShirt.PrimalItemArmor_TekShirt'");
+                items.push("Blueprint'/Game/PrimalEarth/CoreBlueprints/Resources/PrimalItemResource_Element.PrimalItemResource_Element'");
             }
-        });
-    }
 
-    async function gItem(bp, q) {
-        const id = document.getElementById('spawn-target').value;
-        if(!id) return alert("Select Player First");
-        await send(`GiveItemToPlayer ${id} "${bp}" ${q} 50 0`);
-    }
-
-    async function spawnDino(bp) {
-        if(confirm("Dinos spawn at map center (0,0,0) via RCON. Continue?")) {
-            await send(`GMSummon "${bp}" 150`);
+            for(const bp of items) {
+                // FORCE ITEM MODE: 1 quantity, 50 quality, 0 (Item, not BP)
+                await send(`GiveItemToPlayer ${targetID} "${bp}" 1 50 0`);
+            }
+            alert("Kit Sent!");
         }
-    }
-
-    function tab(v,b) {
-        document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
-        document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
-        document.getElementById('view-'+v).classList.add('active');
-        b.classList.add('active');
-    }
-    function sendCustom(){ const c=document.getElementById('custom').value; if(c) send(c); }
-    function confirmSend(c,m){ if(confirm(m)) send(c); }
-
-    renderItems();
-    setTimeout(scanPlayers, 1000);
-</script>
+    </script>
 </body>
 </html>
