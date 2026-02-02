@@ -20,8 +20,6 @@ def run_rcon(command):
         with Client(ARK_IP, ARK_PORT, passwd=ARK_PASS, timeout=15) as client:
             response = client.run(command)
             
-            # Weather commands return NOTHING when successful. 
-            # We must catch this empty string or the app thinks it failed.
             if not response:
                 return "✅ Executed"
             if "Server received, But no response" in response:
@@ -34,7 +32,7 @@ def run_rcon(command):
         print(f"❌ RCON ERROR: {error}")
         
         if "Connection refused" in error:
-            return "❌ CONNECTION REFUSED. Check IP and ensure ARK_PORT is the RCON Port (e.g. 27020)."
+            return "❌ CONNECTION REFUSED. Check ARK_PORT."
         if "Authentication failed" in error:
             return "❌ WRONG PASSWORD."
         if "timed out" in error:
@@ -51,36 +49,6 @@ def send_command():
     data = request.json
     cmd = data.get('command')
     response = run_rcon(cmd)
-    return jsonify({"response": response})
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
-        print(f"❌ ERROR: {error_msg}")
-        
-        # Friendly Error Translation
-        if "Connection refused" in error_msg:
-            return "❌ CONNECTION REFUSED. Check your IP and RCON PORT (Not Game Port)."
-        if "timed out" in error_msg:
-            return "❌ TIMED OUT. Server might be offline or IP is wrong."
-        if "Authentication failed" in error_msg:
-            return "❌ WRONG PASSWORD. Check ARK_PASS in Render."
-            
-        return f"❌ Error: {error_msg}"
-
-@app.route('/')
-def home():
-    return render_template('index.html')
-
-@app.route('/api/command', methods=['POST'])
-def send_command():
-    data = request.json
-    cmd = data.get('command')
-    
-    # Run the command
-    response = run_rcon(cmd)
-    
-    # THIS LINE MUST BE INDENTED (4 SPACES)
     return jsonify({"response": response})
 
 if __name__ == '__main__':
