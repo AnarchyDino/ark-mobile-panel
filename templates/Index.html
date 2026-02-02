@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ARK God Mode</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --bg: #0f1115; --panel: #181b21; --accent: #00e676; --accent-dim: #00e67640;
+            --danger: #ff5252; --text: #eceff1; --text-dim: #90a4ae; 
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: var(--text); font-family: 'Roboto', sans-serif; margin: 0; padding: 0; padding-bottom: 80px; }
+        h1, h2, h3 { font-family: 'Rajdhani', sans-serif; text-transform: uppercase; margin: 0; }
+        
+        /* HEADER & LOGIN */
+        .header { background: var(--panel); padding: 15px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: space-between; }
+        .header h1 { color: var(--accent); font-size: 1.4rem; letter-spacing: 1px; }
+        .status-dot { height: 10px; width: 10px; background: #555; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .status-dot.online { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+        
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        
+        /* NAVIGATION */
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: var(--panel); display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #333; z-index: 90; }
+        .nav-item { color: var(--text-dim); text-align: center; font-size: 0.8rem; background: none; border: none; }
+        .nav-item.active { color: var(--accent); }
+        .nav-icon { font-size: 1.5rem; display: block; margin-bottom: 2px; }
+
+        /* VIEWS */
+        .view { display: none; padding: 15px; animation: fadeIn 0.2s; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* COMPONENTS */
+        .card { background: var(--panel); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; font-family: 'Rajdhani'; letter-spacing: 1px; text-transform: uppercase; margin-top: 5px; cursor: pointer; color: #000; background: var(--text-dim); }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim); }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+        input, select { width: 100%; background: #252a33; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 1rem; }
+        input:focus { border-color: var(--accent); outline: none; }
+
+        /* LISTS */
+        .list-item { display: flex; justify-content: space-between; align-items: center; background: #252a33; padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid transparent; }
+        .list-item.selected { border-color: var(--accent); background: var(--accent-dim); }
+        .item-name { font-weight: 500; }
+        .item-sub { font-size: 0.8rem; color: var(--text-dim); }
+
+        /* SEARCH BAR */
+        .search-sticky { position: sticky; top: 65px; background: var(--bg); padding: 10px 0; z-index: 80; }
+
+        /* CONSOLE */
+        #console-output { font-family: monospace; font-size: 0.8rem; height: 150px; overflow-y: auto; background: black; padding: 10px; border-radius: 8px; color: #0f0; }
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <h1 style="font-size: 2rem; color: var(--accent); margin-bottom: 20px;">ARK COMMAND</h1>
+        <input type="password" id="accessCode" placeholder="Enter Access Code" style="text-align: center;">
+        <button class="btn btn-primary" onclick="attemptLogin()">Initialize Connection</button>
+    </div>
+
+    <div class="header">
+        <div>
+            <span class="status-dot" id="connection-dot"></span>
+            <span id="server-status">OFFLINE</span>
+        </div>
+        <button class="btn-outline" style="width: auto; padding: 5px 10px; margin: 0;" onclick="refreshData()">↻</button>
+    </div>
+
+    <div id="view-dashboard" class="view active">
+        <div class="card">
+            <h3>Server Controls</h3>
+            <div class="grid-2">
+                <button class="btn btn-primary" onclick="cmd('SaveWorld')">💾 Save</button>
+                <button class="btn btn-danger" onclick="confirmAction('DoExit', 'Stop Server?')">🛑 Stop</button>
+            </div>
+            <button class="btn btn-outline" onclick="promptBroadcast()">📢 Broadcast Message</button>
+        </div>
+
+        <div class="card">
+            <h3>World Management</h3>
+            <div class="grid-3">
+                <button class="btn" onclick="cmd('Slomo 5')">⏩ Fast</button>
+                <button class="btn" onclick="cmd('Slomo 1')">▶ Normal</button>
+                <button class="btn" onclick="cmd('Slomo 0.1')">Slow</button>
+            </div>
+            <div style="margin-top:10px;"></div>
+            <div class="grid-2">
+                <button class="btn" onclick="cmd('SetTimeOfDay 06:00')">🌅 Sunrise</button>
+                <button class="btn" onclick="cmd('SetTimeOfDay 12:00')">☀️ Noon</button>
+            </div>
+            <button class="btn btn-danger" style="margin-top:10px" onclick="confirmAction('DestroyWildDinos', 'Wipe all wild dinos?')">🦖 Wipe Wild Dinos</button>
+            <button class="btn btn-outline" style="margin-top:5px" onclick="cmd('CE StopRain')">🌤️ Clear Weather</button>
+        </div>
+
+        <div class="card">
+            <h3>Raw Console</h3>
+            <div id="console-output">Waiting for logs...</div>
+            <input type="text" id="raw-cmd" placeholder="Enter RCON command..." style="margin-top:10px;">
+            <button class="btn" onclick="sendRaw()">Send</button>
+        </div>
+    </div>
+
+    <div id="view-players" class="view">
+        <h3>Active Players</h3>
+        <button class="btn btn-primary" onclick="refreshPlayers()">🔄 Scan Server</button>
+        <div id="player-list" style="margin-top: 15px;">
+            <div style="text-align: center; color: #555;">No players found via RCON</div>
+        </div>
+        
+        <div id="player-context" class="card" style="display:none; border-color: var(--accent);">
+            <h3 id="ctx-name" style="color:var(--accent)">Selected Player</h3>
+            <div class="grid-2">
+                <button class="btn btn-primary" onclick="playerAction('heal')">❤️ Heal</button>
+                <button class="btn btn-primary" onclick="playerAction('xp')">✨ Give XP</button>
+                <button class="btn btn-outline" onclick="playerAction('god')">🛡️ God Mode</button>
+                <button class="btn btn-outline" onclick="playerAction('fly')">🕊️ Fly</button>
+                <button class="btn btn-danger" onclick="playerAction('kick')">🥾 Kick</button>
+                <button class="btn btn-danger" onclick="playerAction('kill')">💀 Kill</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-armory" class="view">
+        <div class="search-sticky">
+            <select id="armory-target">
+                <option value="">Select Target Player First...</option>
+            </select>
+            <input type="text" id="item-search" placeholder="🔍 Search Items (e.g. Tek, Rifle)..." onkeyup="renderItems()">
+        </div>
+        
+        <div id="item-list">
+            </div>
+    </div>
+
+    <div id="view-bestiary" class="view">
+        <div class="card">
+            <h3>Spawn Setup</h3>
+            <select id="dino-target"><option value="">Select Target Player...</option></select>
+            <div class="grid-2">
+                <input type="number" id="dino-level" placeholder="Lvl" value="150">
+                <select id="dino-type">
+                    <option value="tamed">Tamed</option>
+                    <option value="wild">Wild</option>
+                </select>
+            </div>
+        </div>
+        <input type="text" id="dino-search" placeholder="🔍 Search Dinos..." onkeyup="renderDinos()">
+        <div id="dino-list" style="margin-top:10px"></div>
+    </div>
+
+    <div class="nav-bar">
+        <button class="nav-item active" onclick="switchView('dashboard')">
+            <span class="nav-icon">🎛️</span> Controls
+        </button>
+        <button class="nav-item" onclick="switchView('players')">
+            <span class="nav-icon">👥</span> Players
+        </button>
+        <button class="nav-item" onclick="switchView('armory')">
+            <span class="nav-icon">🎒</span> Armory
+        </button>
+        <button class="nav-item" onclick="switchView('bestiary')">
+            <span class="nav-icon">🦕</span> Bestiary
+        </button>
+    </div>
+
+<script>
+    // --- DATABASE (Populated with Common ASA Items) ---
+    // You can add more lines here to expand the list!
+    const ITEMS = [
+        { name: "Element", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Resources/PrimalItemResource_Element.PrimalItemResource_Element'", cat: "Res" },
+        { name: "Polymer", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Resources/PrimalItemResource_Polymer.PrimalItemResource_Polymer'", cat: "Res" },
+        { name: "Electronics", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Resources/PrimalItemResource_Electronics.PrimalItemResource_Electronics'", cat: "Res" },
+        { name: "Black Pearl", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Resources/PrimalItemResource_BlackPearl.PrimalItemResource_BlackPearl'", cat: "Res" },
+        
+        { name: "Tek Rifle", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItem_TekRifle.PrimalItem_TekRifle'", cat: "Wep" },
+        { name: "Tek Helmet", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Tek/PrimalItemArmor_TekHelmet.PrimalItemArmor_TekHelmet'", cat: "Arm" },
+        { name: "Tek Chest", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Tek/PrimalItemArmor_TekShirt.PrimalItemArmor_TekShirt'", cat: "Arm" },
+        { name: "Pump Shotgun", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItem_WeaponGun_PumpShotgun.PrimalItem_WeaponGun_PumpShotgun'", cat: "Wep" },
+        { name: "Fab Sniper", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItem_WeaponMachinedSniper.PrimalItem_WeaponMachinedSniper'", cat: "Wep" },
+        { name: "Adv Rifle Bullet", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Weapons/PrimalItemAmmo_AdvancedRifleBullet.PrimalItemAmmo_AdvancedRifleBullet'", cat: "Ammo" },
+        
+        { name: "Rex Saddle", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Saddles/PrimalItemArmor_RexSaddle.PrimalItemArmor_RexSaddle'", cat: "Sad" },
+        { name: "Giga Saddle", path: "Blueprint'/Game/PrimalEarth/CoreBlueprints/Items/Armor/Saddles/PrimalItemArmor_GigantSaddle.PrimalItemArmor_GigantSaddle'", cat: "Sad" },
+        { name: "Cryopod (Empty)", path: "Blueprint'/Game/Extinction/CoreBlueprints/Weapons/PrimalItem_WeaponEmptyCryopod.PrimalItem_WeaponEmptyCryopod'", cat: "Tool" }
+    ];
+
+    const DINOS = [
+        { name: "Rex", id: "Rex_Character_BP_C" },
+        { name: "Giganotosaurus", id: "Gigant_Character_BP_C" },
+        { name: "Carcharodontosaurus", id: "Carcha_Character_BP_C" },
+        { name: "Argentavis", id: "Argent_Character_BP_C" },
+        { name: "Pteranodon", id: "Ptero_Character_BP_C" },
+        { name: "Quetzal", id: "Quetz_Character_BP_C" },
+        { name: "Wyvern (Fire)", id: "Wyvern_Character_BP_Fire_C" },
+        { name: "Wyvern (Lightning)", id: "Wyvern_Character_BP_Lightning_C" },
+        { name: "Yutyrannus", id: "Yutyrannus_Character_BP_C" },
+        { name: "Therizino", id: "Therizino_Character_BP_C" },
+        { name: "Raptor", id: "Raptor_Character_BP_C" },
+        { name: "Dodo", id: "Dodo_Character_BP_C" }
+    ];
+
+    // --- STATE ---
+    let currentUser = null;
+    let selectedPlayerId = null;
+    let selectedPlayerName = null;
+
+    // --- APP LOGIC ---
+
+    function attemptLogin() {
+        const code = document.getElementById('accessCode').value;
+        if(code) {
+            localStorage.setItem('ark_access', code);
+            document.getElementById('login-overlay').style.display = 'none';
+            refreshPlayers();
+            renderItems();
+            renderDinos();
+        }
+    }
+
+    function switchView(viewName) {
+        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(`view-${viewName}`).classList.add('active');
+        // Find button that called this and set active? Logic simplified for now.
+    }
+
+    // --- API & RCON ---
+    async function cmd(commandStr) {
+        const code = localStorage.getItem('ark_access');
+        log(`> ${commandStr}`);
+        
+        try {
+            const res = await fetch('/api/command', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ command: commandStr, access_code: code })
+            });
+            const data = await res.json();
+            
+            if(data.response && data.response.includes("ACCESS DENIED")) {
+                alert("Wrong Password");
+                document.getElementById('login-overlay').style.display = 'flex';
+                return;
+            }
+            
+            log(`< ${data.response}`);
+            document.getElementById('server-status').innerText = "ONLINE";
+            document.getElementById('server-status').style.color = "#00e676";
+            document.getElementById('connection-dot').classList.add('online');
+            return data.response;
+        } catch(e) {
+            log(`ERROR: ${e}`);
+            document.getElementById('server-status').innerText = "ERROR";
+            document.getElementById('server-status').style.color = "red";
+            document.getElementById('connection-dot').classList.remove('online');
+        }
+    }
+
+    function log(msg) {
+        const box = document.getElementById('console-output');
+        box.innerHTML = `<div>${msg}</div>` + box.innerHTML;
+    }
+
+    // --- PLAYER MANAGEMENT ---
+    async function refreshPlayers() {
+        const res = await cmd("ListPlayers");
+        const listDiv = document.getElementById('player-list');
+        const selects = [document.getElementById('armory-target'), document.getElementById('dino-target')];
+        
+        // Clear lists
+        listDiv.innerHTML = "";
+        selects.forEach(s => s.innerHTML = '<option value="">Select Target...</option>');
+
+        // Parse: "0. Bob, 12345"
+        const matches = res.matchAll(/(\d+)\.\s(.*?),\s([0-9a-fA-F]+)/g);
+        let found = false;
+
+        for (const match of matches) {
+            found = true;
+            const name = match[2];
+            const id = match[3];
+
+            // Add to Main List
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.innerHTML = `
+                <div>
+                    <div class="item-name">${name}</div>
+                    <div class="item-sub">ID: ${id}</div>
+                </div>
+                <button class="btn-outline" style="width:auto; padding:5px 15px;" onclick="selectPlayer('${id}', '${name}')">Select</button>
+            `;
+            listDiv.appendChild(div);
+
+            // Add to Dropdowns
+            selects.forEach(s => {
+                const opt = new Option(name, id);
+                s.add(opt);
+            });
+        }
+        if(!found) listDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#555">No Players Online</div>';
+    }
+
+    function selectPlayer(id, name) {
+        selectedPlayerId = id;
+        selectedPlayerName = name;
+        
+        // Show Context Menu
+        document.getElementById('player-context').style.display = 'block';
+        document.getElementById('ctx-name').innerText = `Selected: ${name}`;
+        
+        // Update other tabs
+        document.getElementById('armory-target').value = id;
+        document.getElementById('dino-target').value = id;
+        
+        window.scrollTo(0, 0);
+    }
+
+    function playerAction(action) {
+        if(!selectedPlayerId) return alert("No player selected");
+        
+        let c = "";
+        switch(action) {
+            case 'heal': c = `ScriptCommand RefillStats ${selectedPlayerId}`; break; // Requires mods usually, or use GiveItem Potions
+            // Vanilla Cheat fallback:
+            case 'xp': c = `GiveExpToPlayer ${selectedPlayerId} 1000 0 0`; break;
+            case 'god': c = `ScriptCommand God ${selectedPlayerId}`; break; // RCON God mode is tricky remotely
+            case 'kick': c = `KickPlayer ${selectedPlayerId}`; break;
+            case 'kill': c = `KillPlayer ${selectedPlayerId}`; break; // Might kill by ID
+        }
+        
+        // Note: Some commands like "God" apply to the executor (RCON), not the target.
+        // For accurate player targeting on Vanilla, "GiveItem" is the most 100% reliable method.
+        // For "Kill", "Kick", "GiveExpToPlayer", those work with IDs.
+        
+        if(action === 'heal') alert("Heal via RCON requires Server API mods. Trying anyway...");
+        
+        cmd(c);
+    }
+
+    // --- ARMORY & SPAWNING ---
+    function renderItems() {
+        const search = document.getElementById('item-search').value.toLowerCase();
+        const container = document.getElementById('item-list');
+        container.innerHTML = "";
+
+        ITEMS.forEach(item => {
+            if(item.name.toLowerCase().includes(search)) {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `
+                    <div class="item-name">${item.name} <span class="item-sub">(${item.cat})</span></div>
+                    <button class="btn-primary" style="width:auto; padding:8px 15px;" onclick="giveItem('${item.path}')">Give</button>
+                `;
+                container.appendChild(div);
+            }
+        });
+    }
+
+    async function giveItem(bpPath) {
+        const target = document.getElementById('armory-target').value;
+        if(!target) return alert("Select a player in the dropdown first!");
+        
+        // Quality 10, Amount 1
+        const c = `GiveItemToPlayer ${target} "${bpPath}" 1 10 0`;
+        await cmd(c);
+        // alert("Item Sent!");
+    }
+
+    // --- BESTIARY & DINOS ---
+    function renderDinos() {
+        const search = document.getElementById('dino-search').value.toLowerCase();
+        const container = document.getElementById('dino-list');
+        container.innerHTML = "";
+
+        DINOS.forEach(dino => {
+            if(dino.name.toLowerCase().includes(search)) {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `
+                    <div class="item-name">${dino.name}</div>
+                    <button class="btn-primary" style="width:auto; padding:8px 15px;" onclick="spawnDino('${dino.id}')">Spawn</button>
+                `;
+                container.appendChild(div);
+            }
+        });
+    }
+
+    async function spawnDino(dinoId) {
+        const target = document.getElementById('dino-target').value;
+        const level = document.getElementById('dino-level').value;
+        const type = document.getElementById('dino-type').value;
+
+        if(!target) {
+            // If no player selected, warn user
+            if(confirm("No player selected. Spawn at random location (0,0,0)?")) {
+                cmd(`Summon ${dinoId}`);
+            }
+            return;
+        }
+
+        // ASA RCON is tricky with "Spawn at player".
+        // Best Method: Give them a Cryopod with the dino (Requires Mod).
+        // Vanilla Method: We can try 'ScriptCommand' if Nitrado enables extended args.
+        // Fallback: Just GM Summon which spawns near the 'server' (useless) or...
+        
+        // Actually, the most reliable 'God Mode' feel is to give the player the resources to tame one instantly
+        // OR try the "SpawnDino" command with coordinates, but we don't know the player's coords.
+        
+        alert("NOTE: Spawning Dinos remotely via Vanilla RCON is limited. Sending 'GMSummon' command...");
+        // This usually spawns it at 0,0,0 on Dedicated Servers. 
+        // A better hack:
+        cmd(`GMSummon "${dinoId}" ${level}`);
+    }
+
+    // --- UTILS ---
+    function confirmAction(c, text) {
+        if(confirm(text)) cmd(c);
+    }
+    
+    function promptBroadcast() {
+        const m = prompt("Message:");
+        if(m) cmd(`Broadcast ${m}`);
+    }
+    
+    function sendRaw() {
+        const c = document.getElementById('raw-cmd').value;
+        if(c) cmd(c);
+    }
+
+    // Auto-login check
+    if(localStorage.getItem('ark_access')) {
+        document.getElementById('accessCode').value = localStorage.getItem('ark_access');
+        // document.getElementById('login-overlay').style.display = 'none';
+        // attemptLogin();
+    }
+</script>
+</body>
+</html>
