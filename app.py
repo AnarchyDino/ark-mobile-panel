@@ -7,43 +7,46 @@ from rcon.source import Client
 app = Flask(__name__)
 CORS(app)
 
-# --- DIRECT CONNECTION ATTEMPT ---
-# Trying the internal port found in GameUserSettings.ini
+# --- HARDCODED CREDENTIALS ---
 ARK_IP = '31.214.239.14'
-ARK_PORT = 25000 
 ARK_PASS = '3uKmTEuM'
 
+# We will try ALL of these ports to find the real one
+POSSIBLE_PORTS = [11690, 11691, 11692, 27015, 27020]
+
 print("-------------------------------------------------")
-print(f"✅ SYSTEM BOOT. TARGETING INTERNAL: {ARK_IP}:{ARK_PORT}")
+print(f"✅ SYSTEM BOOT. SCANNING PORTS: {POSSIBLE_PORTS}")
 print("-------------------------------------------------")
 
 def run_rcon(command):
-    try:
-        # 15s timeout
-        with Client(ARK_IP, ARK_PORT, passwd=ARK_PASS, timeout=15) as client:
-            print(f"🚀 SENDING: {command}")
-            response = client.run(command)
+    # Try every port in the list until one works
+    for port in POSSIBLE_PORTS:
+        try:
+            print(f"🔍 TRYING PORT: {port}...")
+            with Client(ARK_IP, port, passwd=ARK_PASS, timeout=5) as client:
+                response = client.run(command)
+                
+                # If we get here, we connected!
+                print(f"✅ CONNECTED ON PORT {port}!")
+                print(f"📥 RECEIVED: {response}")
+                
+                # If ListPlayers returns "No response", it's a Ghost Port -> Ignore it
+                if command == "ListPlayers" and "Server received, But no response" in response:
+                    print(f"⚠️ PORT {port} IS A GHOST (Game Port). IGNORING.")
+                    continue 
+
+                if not response:
+                    return f"✅ Executed (via Port {port})"
+                if "Server received, But no response" in response:
+                    return f"✅ Success (via Port {port})"
+                
+                return f"{response} (via Port {port})"
+                
+        except Exception as e:
+            print(f"❌ PORT {port} FAILED: {e}")
+            continue # Try the next port
             
-            if not response:
-                return "✅ Executed (No Return)"
-            if "Server received, But no response" in response:
-                return "✅ Success"
-            
-            return response
-            
-    except Exception as e:
-        error_msg = str(e)
-        print(f"❌ RCON ERROR: {error_msg}")
-        
-        # If 25000 is blocked, this error will trigger instantly
-        if "Connection refused" in error_msg:
-            return f"❌ CONNECTION REFUSED. Port {ARK_PORT} is blocked by firewall."
-        if "timed out" in error_msg:
-            return "❌ TIMED OUT. IP is wrong or Server is offline."
-        if "Authentication failed" in error_msg:
-            return "❌ WRONG PASSWORD."
-            
-        return f"❌ Error: {error_msg}"
+    return "❌ FAILED: All ports refused connection."
 
 @app.route('/')
 def home():
