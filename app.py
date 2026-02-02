@@ -9,7 +9,7 @@ CORS(app)
 
 # --- CONFIGURATION ---
 ARK_IP = os.environ.get('ARK_IP', '31.214.239.14')
-ARK_PORT = int(os.environ.get('ARK_PORT', 11690))
+ARK_PORT = int(os.environ.get('ARK_PORT', 25000))
 ARK_PASS = os.environ.get('ARK_PASS', '3uKmTEuM')
 
 print(f"✅ SYSTEM ONLINE. TARGET: {ARK_IP}:{ARK_PORT}")
