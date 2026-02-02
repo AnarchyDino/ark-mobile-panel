@@ -12,28 +12,50 @@ ARK_IP = os.environ.get('ARK_IP', '31.214.239.14')
 ARK_PORT = int(os.environ.get('ARK_PORT', 11690))
 ARK_PASS = os.environ.get('ARK_PASS', '3uKmTEuM')
 
-print("-------------------------------------------------")
-print(f"✅ APP STARTING. TARGETING: {ARK_IP}:{ARK_PORT}")
-print("-------------------------------------------------")
+print(f"✅ SYSTEM ONLINE. TARGET: {ARK_IP}:{ARK_PORT}")
 
 def run_rcon(command):
     try:
-        # Connect to ARK
-        with Client(ARK_IP, ARK_PORT, passwd=ARK_PASS, timeout=10) as client:
-            print(f"🚀 SENDING: {command}")
+        # 15s timeout
+        with Client(ARK_IP, ARK_PORT, passwd=ARK_PASS, timeout=15) as client:
             response = client.run(command)
-            print(f"📥 RECEIVED: {response}")
             
-            # Handle empty success messages from ARK
+            # Weather commands return NOTHING when successful. 
+            # We must catch this empty string or the app thinks it failed.
             if not response:
-                return "✅ Executed (No return message)"
+                return "✅ Executed"
             if "Server received, But no response" in response:
                 return "✅ Success"
             
             return response
             
     except Exception as e:
-        error_msg = str(e)
+        error = str(e)
+        print(f"❌ RCON ERROR: {error}")
+        
+        if "Connection refused" in error:
+            return "❌ CONNECTION REFUSED. Check IP and ensure ARK_PORT is the RCON Port (e.g. 27020)."
+        if "Authentication failed" in error:
+            return "❌ WRONG PASSWORD."
+        if "timed out" in error:
+            return "❌ TIMED OUT. Server offline?"
+            
+        return f"❌ Error: {error}"
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/api/command', methods=['POST'])
+def send_command():
+    data = request.json
+    cmd = data.get('command')
+    response = run_rcon(cmd)
+    return jsonify({"response": response})
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
         print(f"❌ ERROR: {error_msg}")
         
         # Friendly Error Translation
