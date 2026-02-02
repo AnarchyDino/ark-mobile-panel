@@ -8,9 +8,9 @@ CORS(app)
 
 # --- CONFIGURATION ---
 # We still need these to talk to the ARK Server
-ARK_IP = os.environ.get('ARK_IP', '127.0.0.1')
-ARK_PORT = int(os.environ.get('ARK_PORT', 27020))
-ARK_PASS = os.environ.get('ARK_PASS', 'password')
+ARK_IP = os.environ.get('ARK_IP', '31.214.239.14')
+ARK_PORT = int(os.environ.get('ARK_PORT', 11690))
+ARK_PASS = os.environ.get('ARK_PASS', '3uKmTEuM')
 
 def run_rcon(command):
     try:
